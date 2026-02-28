@@ -1,0 +1,32 @@
+﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ÔÜÖ´©Å  specify custom .env file path with { path: '/custom/path/.env' }
+node : Standard MongoDB connection failed, attempting 
+zero-config in-memory DB fallback...
+At line:1 char:1
++ node server.js > log.txt 2>&1 ; cat log.txt
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Standard 
+    MongoD... DB fallback...:String) [], RemoteExcep  
+  tion
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Failed to start in-memory DB: MongoParseError: 
+options usenewurlparser, useunifiedtopology are not 
+supported
+    at parseOptions (D:\work\Mahparah\New\backend\node
+_modules\mongodb\lib\connection_string.js:272:15)
+    at new MongoClient (D:\work\Mahparah\New\backend\n
+ode_modules\mongodb\lib\mongo_client.js:67:61)
+    at NativeConnection.createClient (D:\work\Mahparah
+\New\backend\node_modules\mongoose\lib\drivers\node-mo
+ngodb-native\connection.js:334:14)
+    at NativeConnection.openUri (D:\work\Mahparah\New\
+backend\node_modules\mongoose\lib\connection.js:1075:3
+4)
+    at Mongoose.connect (D:\work\Mahparah\New\backend\
+node_modules\mongoose\lib\mongoose.js:471:15)
+    at connectDB 
+(D:\work\Mahparah\New\backend\server.js:29:28)
+    at process.processTicksAndRejections 
+(node:internal/process/task_queues:103:5) {
+  errorLabelSet: Set(0) {}
+}

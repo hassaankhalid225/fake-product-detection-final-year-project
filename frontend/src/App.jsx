@@ -4,6 +4,9 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import ProductManagement from './pages/ProductManagement';
 import VerificationPage from './pages/VerificationPage';
+import ManufacturerDashboard from './pages/ManufacturerDashboard';
+import DistributorDashboard from './pages/DistributorDashboard';
+import RetailerDashboard from './pages/RetailerDashboard';
 import Sidebar from './components/Sidebar';
 import './index.css';
 
@@ -42,6 +45,30 @@ function App() {
           element={
             <ProtectedRoute>
               <ProductManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manufacturer"
+          element={
+            <ProtectedRoute>
+              <ManufacturerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/distributor"
+          element={
+            <ProtectedRoute>
+              <DistributorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/retailer"
+          element={
+            <ProtectedRoute>
+              <RetailerDashboard />
             </ProtectedRoute>
           }
         />

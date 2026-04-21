@@ -1,199 +1,233 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiCheckCircle, FiXCircle, FiAlertTriangle, FiSearch, FiCamera } from 'react-icons/fi';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { FiSearch, FiCamera, FiShield, FiAlertTriangle, FiCheckCircle, FiClock, FiArrowLeft } from 'react-icons/fi';
 
 const VerificationPage = () => {
-    const { serialNumber: urlSerial } = useParams();
+    const { serialNumber } = useParams();
     const navigate = useNavigate();
-    const [serialInput, setSerialInput] = useState('');
+    const [manualId, setManualId] = useState('');
     const [result, setResult] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [showScanner, setShowScanner] = useState(false);
+    const [error, setError] = useState('');
+    const [history, setHistory] = useState([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const scannerRef = useRef(null);
 
     useEffect(() => {
-        if (urlSerial) {
-            setSerialInput(urlSerial);
-            handleVerify(urlSerial);
+        if (serialNumber) {
+            verifyProduct(serialNumber);
+            fetchHistory(serialNumber);
+            setIsScanning(false);
         }
-    }, [urlSerial]);
+    }, [serialNumber]);
 
-    useEffect(() => {
-        if (showScanner) {
-            const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+    const initializeScanner = () => {
+        setIsScanning(true);
+        setTimeout(() => {
+            const scanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            });
+            
             scanner.render(
                 (decodedText) => {
-                    scanner.clear();
-                    setShowScanner(false);
-                    // Assuming QR code contains the full URL, parsing it via simple match or string manipulation
-                    let extractedSerial = decodedText;
-                    if (decodedText.includes('/verify/')) {
-                        extractedSerial = decodedText.split('/verify/')[1];
-                    }
-                    setSerialInput(extractedSerial);
-                    navigate(`/verify/${extractedSerial}`);
+                    scanner.clear().catch(err => console.error("Scanner clear error:", err));
+                    setIsScanning(false);
+                    // Extract ID from URL if necessary
+                    const segments = decodedText.split('/');
+                    const scannedId = segments[segments.length - 1];
+                    navigate(`/verify/${scannedId}`);
                 },
-                (error) => {
-                    // ignore scan errors until success
+                (err) => {
+                    // console.warn(err);
                 }
             );
-
-            return () => {
-                scanner.clear().catch(e => console.error(e));
-            };
-        }
-    }, [showScanner, navigate]);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (serialInput.trim()) {
-            navigate(`/verify/${serialInput.trim()}`);
-        }
+            scannerRef.current = scanner;
+        }, 100);
     };
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const stopScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(err => console.error(err));
+            scannerRef.current = null;
+        }
+        setIsScanning(false);
+    };
 
-    const handleVerify = async (serial) => {
-        setLoading(true);
-        setResult(null);
-
+    const verifyProduct = async (id) => {
+        setIsVerifying(true);
         try {
-            const res = await axios.post(`${API_BASE_URL}/api/verify/${serial}`);
-            setResult({ status: 'success', data: res.data });
+            const res = await axios.get(`http://localhost:5000/verifyProduct/${id}`);
+            setResult(res.data);
+            setError('');
         } catch (err) {
-            setResult({
-                status: 'error',
-                data: err.response?.data || { msg: 'Server error. Could not verify product.' }
-            });
+            setResult(null);
+            setError(err.response?.data?.msg || "Product verification failed. It may not be registered on the blockchain.");
         } finally {
-            setLoading(false);
+            setIsVerifying(false);
         }
     };
 
-
-    const renderResult = () => {
-        if (!result) return null;
-
-        const { status, data } = result;
-        const isSuccess = data.status === 'Verified Original Product';
-        const isDuplicate = data.status === 'Duplicate Serial Detected';
-
-        let icon, color, bgColor;
-
-        if (isSuccess) {
-            icon = <FiCheckCircle size={64} color="var(--success)" />;
-            color = 'var(--success)';
-            bgColor = 'rgba(16, 185, 129, 0.1)';
-        } else if (isDuplicate) {
-            icon = <FiAlertTriangle size={64} color="var(--warning)" />;
-            color = 'var(--warning)';
-            bgColor = 'rgba(245, 158, 11, 0.1)';
-        } else {
-            icon = <FiXCircle size={64} color="var(--error)" />;
-            color = 'var(--error)';
-            bgColor = 'rgba(239, 68, 68, 0.1)';
+    const fetchHistory = async (id) => {
+        try {
+            const res = await axios.get(`http://localhost:5000/productHistory/${id}`);
+            setHistory(res.data.history || []);
+        } catch (err) {
+            console.error("History fetch error:", err);
         }
+    };
 
-        return (
-            <div
-                className="glass-panel animate-fade-in"
-                style={{
-                    marginTop: '30px',
-                    padding: '40px',
-                    textAlign: 'center',
-                    backgroundColor: bgColor,
-                    border: `1px solid ${color}`
-                }}
-            >
-                <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>{icon}</div>
-                <h2 style={{ fontSize: '1.8rem', color: color, marginBottom: '16px' }}>{data.status || data.msg}</h2>
-
-                {isSuccess && data.product && (
-                    <div style={{ textAlign: 'left', marginTop: '30px', padding: '20px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px' }}>
-                        <h3 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>Blockchain Authenticated Meta</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.95rem' }}>
-                            <p><span style={{ color: 'var(--text-secondary)' }}>Product:</span> {data.product.productName}</p>
-                            <p><span style={{ color: 'var(--text-secondary)' }}>Serial:</span> {data.product.serialNumber}</p>
-                            <p><span style={{ color: 'var(--text-secondary)' }}>Batch:</span> {data.product.batchNumber}</p>
-                            <p><span style={{ color: 'var(--text-secondary)' }}>Mfg Date:</span> {new Date(data.product.manufacturingDate).toLocaleDateString()}</p>
-                        </div>
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '8px' }}>Blockchain Immutability Lock:</p>
-                            <p style={{ wordBreak: 'break-all', fontSize: '0.85rem', color: 'var(--primary)', fontFamily: 'monospace' }}>
-                                {data.product.hash}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {isDuplicate && (
-                    <p style={{ color: 'var(--text-primary)', marginTop: '16px' }}>
-                        Warning: This serial number has been scanned {data.count} times across suspicious zones. It may be compromised.
-                    </p>
-                )}
-            </div>
-        );
+    const handleManualVerify = (e) => {
+        e.preventDefault();
+        if (manualId.trim()) {
+            navigate(`/verify/${manualId.trim()}`);
+        }
     };
 
     return (
-        <div className="flex-center" style={{ minHeight: '100vh', width: '100%', flexDirection: 'column' }}>
-
-            <div className="glass-panel animate-fade-in" style={{ padding: '40px', width: '100%', maxWidth: '600px' }}>
+        <div className="flex-center" style={{ minHeight: '80vh', padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '600px', padding: '40px' }}>
+                
+                {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h1 className="heading" style={{ fontSize: '2.5rem', marginBottom: '8px' }}>VeriChain Scanner</h1>
-                    <p className="subheading" style={{ marginBottom: '0' }}>Verify your product's authenticity via Blockchain</p>
+                    <div className="flex-center" style={{ marginBottom: '16px' }}>
+                        <FiShield size={48} color="var(--primary)" />
+                    </div>
+                    <h1 className="heading" style={{ fontSize: '2rem', margin: 0 }}>VeriChain Scanner</h1>
+                    <p className="subheading" style={{ margin: '8px 0 0' }}>
+                        Verify your product's authenticity via Blockchain
+                    </p>
                 </div>
 
-                {showScanner ? (
-                    <div style={{ marginBottom: '24px' }}>
-                        <div id="reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }}></div>
-                        <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => setShowScanner(false)}
-                            style={{ width: '100%', marginTop: '16px' }}
-                        >
-                            Cancel Scan
-                        </button>
+                {!serialNumber ? (
+                    <div className="animate-fade-in">
+                        {/* Manual Input Section */}
+                        <form onSubmit={handleManualVerify}>
+                            <label htmlFor="serialNumber">Enter Serial Number</label>
+                            <div style={{ position: 'relative' }}>
+                                <input 
+                                    id="serialNumber"
+                                    type="text" 
+                                    placeholder="e.g. PRD-12345..." 
+                                    value={manualId}
+                                    onChange={(e) => setManualId(e.target.value)}
+                                    style={{ paddingLeft: '44px' }}
+                                />
+                                <FiSearch 
+                                    style={{ position: 'absolute', left: '16px', top: '24px', color: 'var(--text-secondary)' }} 
+                                />
+                            </div>
+                            <button className="btn" type="submit" style={{ width: '100%', marginTop: '8px' }}>
+                                Verify Product
+                            </button>
+                        </form>
+
+                        <div className="flex-center" style={{ margin: '24px 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                            <div style={{ height: '1px', flex: 1, background: 'var(--surface-border)' }}></div>
+                            <span style={{ margin: '0 16px' }}>OR</span>
+                            <div style={{ height: '1px', flex: 1, background: 'var(--surface-border)' }}></div>
+                        </div>
+
+                        {/* QR Section */}
+                        {!isScanning ? (
+                            <button 
+                                className="btn btn-secondary flex-center" 
+                                onClick={initializeScanner}
+                                style={{ width: '100%', gap: '10px' }}
+                            >
+                                <FiCamera size={20} />
+                                Scan QR Code
+                            </button>
+                        ) : (
+                            <div className="animate-fade-in">
+                                <div id="reader" style={{ overflow: 'hidden', borderRadius: '12px', marginBottom: '16px' }}></div>
+                                <button className="btn btn-secondary" onClick={stopScanner} style={{ width: '100%' }}>
+                                    Cancel Scanning
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <FiSearch style={{ position: 'absolute', top: '18px', left: '16px', color: 'var(--text-secondary)' }} />
-                            <input
-                                type="text"
-                                placeholder="Enter Serial Number..."
-                                value={serialInput}
-                                onChange={(e) => setSerialInput(e.target.value)}
-                                style={{ margin: 0, paddingLeft: '44px' }}
-                            />
+                    <div className="animate-fade-in">
+                        {/* Results Section */}
+                        <div style={{ marginBottom: '24px' }}>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => navigate('/')} 
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem', border: 'none' }}
+                            >
+                                <FiArrowLeft /> Back to home
+                            </button>
                         </div>
-                        <button type="submit" className="btn" disabled={loading || !serialInput.trim()}>
-                            {loading ? 'Verifying...' : 'Verify'}
-                        </button>
-                    </form>
-                )}
 
-                {!showScanner && (
-                    <div style={{ textAlign: 'center' }}>
-                        <p style={{ margin: '16px 0', color: 'var(--text-secondary)' }}>OR</p>
-                        <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => setShowScanner(true)}
-                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
-                        >
-                            <FiCamera /> Scan QR Code
-                        </button>
+                        {isVerifying ? (
+                            <div style={{ textAlign: 'center', padding: '40px' }}>
+                                <div className="loader"></div>
+                                <p>Verifying authenticity...</p>
+                            </div>
+                        ) : error ? (
+                            <div style={{ textAlign: 'center', padding: '24px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)' }}>
+                                <FiAlertTriangle size={48} color="var(--error)" style={{ marginBottom: '16px' }} />
+                                <h3 style={{ color: 'var(--error)', marginBottom: '8px' }}>Counterfeit Warning</h3>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{error}</p>
+                            </div>
+                        ) : result && (
+                            <div>
+                                <div style={{ textAlign: 'center', padding: '24px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', marginBottom: '24px' }}>
+                                    <FiCheckCircle size={48} color="var(--success)" style={{ marginBottom: '16px' }} />
+                                    <h3 style={{ color: 'var(--success)', marginBottom: '4px' }}>Authentic Product</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Verified on Immutable Ledger</p>
+                                </div>
+
+                                <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                                    <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', borderBottom: '1px solid var(--surface-border)', paddingBottom: '12px' }}>Product Specifications</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', fontSize: '0.95rem' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Name:</span>
+                                        <span>{result.product.productName || result.product.name}</span>
+                                        
+                                        <span style={{ color: 'var(--text-secondary)' }}>Manufacturer:</span>
+                                        <span>{result.product.manufacturer || result.product.company}</span>
+                                        
+                                        <span style={{ color: 'var(--text-secondary)' }}>Batch:</span>
+                                        <span>{result.product.batchNumber || result.product.batch}</span>
+                                        
+                                        <span style={{ color: 'var(--text-secondary)' }}>Current Owner:</span>
+                                        <span>{result.product.currentOwner || 'N/A'}</span>
+
+                                        <span style={{ color: 'var(--text-secondary)' }}>Status:</span>
+                                        <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{result.product.status}</span>
+                                    </div>
+                                </div>
+
+                                {history.length > 0 && (
+                                    <div>
+                                        <h4 style={{ marginBottom: '16px', paddingLeft: '8px' }}>Supply Chain History</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            {history.map((h, i) => (
+                                                <div key={i} className="animate-fade-in" style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--surface-border)', position: 'relative' }}>
+                                                    <div className="flex-between" style={{ marginBottom: '8px' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <FiClock /> {h.timestamp}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>{h.status}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.9rem' }}>
+                                                        <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>From:</span> {h.previousOwner}</p>
+                                                        <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>To:</span> {h.newOwner}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
-
-            <div style={{ width: '100%', maxWidth: '600px' }}>
-                {renderResult()}
-            </div>
-
         </div>
     );
 };

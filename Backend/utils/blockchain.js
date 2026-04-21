@@ -1,42 +1,37 @@
-const { Gateway, Wallets } = require('fabric-network');
-const path = require('path');
-const fs = require('fs');
+const { ethers } = require("ethers");
+const fs = require("fs");
+const path = require("path");
+
+let contractInstance = null;
+let provider = null;
+let signer = null;
 
 async function getContractInstance() {
+    if (contractInstance) {
+        return { contract: contractInstance, provider, signer };
+    }
+
     try {
-        // load the network configuration
-        const ccpPath = path.resolve(process.env.CCP_PATH || '../network/connection-org1.json');
-        const fileExists = fs.existsSync(ccpPath);
-        if (!fileExists) {
-            console.warn(`Connection profile not found at ${ccpPath}. Blockchain interactions will be mocked.`);
-            return null;
-        }
-        const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+        const contractDataPath = path.join(__dirname, 'ContractData.json');
 
-        // Create a new file system based wallet for managing identities.
-        const walletPath = path.join(process.cwd(), 'wallet');
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
-
-        // Check to see if we've already enrolled the user.
-        const identity = await wallet.get('appUser');
-        if (!identity) {
-            console.log('An identity for the user "appUser" does not exist in the wallet. Run enrollment script first.');
+        if (!fs.existsSync(contractDataPath)) {
+            console.warn(`Contract details not found at ${contractDataPath}. Please deploy smart contract first.`);
             return null;
         }
 
-        // Create a new gateway for connecting to our peer node.
-        const gateway = new Gateway();
-        await gateway.connect(ccp, { wallet, identity: 'appUser', discovery: { enabled: true, asLocalhost: true } });
+        const contractData = JSON.parse(fs.readFileSync(contractDataPath, 'utf8'));
 
-        // Get the network (channel) our contract is deployed to.
-        const network = await gateway.getNetwork(process.env.CHANNEL_NAME || 'mychannel');
+        // Connect to local Hardhat node
+        provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
 
-        // Get the contract from the network.
-        const contract = network.getContract(process.env.CHAINCODE_NAME || 'product-verification');
+        // For local development, grab the first signer from node
+        signer = await provider.getSigner(0);
 
-        return { contract, gateway };
+        contractInstance = new ethers.Contract(contractData.address, contractData.abi, signer);
+
+        return { contract: contractInstance, provider, signer };
     } catch (error) {
-        console.error(`Failed to get contract instance: ${error}`);
+        console.error(`Failed to connect to Ethereum: ${error}`);
         return null;
     }
 }

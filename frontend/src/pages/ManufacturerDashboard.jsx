@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { QRCodeSVG } from 'qrcode.react';
+import BlockchainStatus from '../components/BlockchainStatus';
 
 const ManufacturerDashboard = () => {
     const [formData, setFormData] = useState({
@@ -42,6 +43,7 @@ const ManufacturerDashboard = () => {
     return (
         <div style={{ padding: '20px' }}>
             <h2>Manufacturer Dashboard</h2>
+            <BlockchainStatus />
             <hr />
             <div style={{ display: 'flex', gap: '40px', marginTop: '20px' }}>
                 <div style={{ flex: 1 }}>

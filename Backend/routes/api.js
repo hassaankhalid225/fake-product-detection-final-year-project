@@ -10,6 +10,25 @@ const serializeBigInt = (obj) => JSON.parse(JSON.stringify(obj, (key, value) =>
     typeof value === 'bigint' ? value.toString() : value
 ));
 
+// GET /blockchain-status
+router.get('/blockchain-status', async (req, res) => {
+    try {
+        const blockchain = await getContractInstance();
+        if (blockchain) {
+            const { contract } = blockchain;
+            const address = await contract.getAddress();
+            return res.json({ 
+                connected: true, 
+                network: 'Hardhat Localhost',
+                contractAddress: address
+            });
+        }
+        res.json({ connected: false, error: 'Node not reachable or contract not deployed' });
+    } catch (err) {
+        res.json({ connected: false, error: err.message });
+    }
+});
+
 // POST /registerProduct
 router.post('/registerProduct', async (req, res) => {
     try {

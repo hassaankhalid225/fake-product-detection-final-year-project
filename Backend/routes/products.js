@@ -16,20 +16,30 @@ router.post('/', async (req, res) => {
         const dataString = `${productName}${serialNumber}${batchNumber}${manufacturingDate}${description}`;
         const hash = crypto.createHash('sha256').update(dataString).digest('hex');
 
-        // Hyperledger Fabric Integration
-        let blockchainTxId = 'Placeholder_HLF_Tx';
+        // Blockchain Integration (Ethereum/Hardhat)
+        let blockchainTxId = 'Pending';
         const blockchain = await getContractInstance();
 
         if (blockchain) {
-            const { contract, gateway } = blockchain;
-            // company name/id can be taken from req.user (if auth is there) or req.body
+            const { contract } = blockchain;
             const company = req.body.company || 'UnknownCompany';
-
-            await contract.submitTransaction('registerProduct', serialNumber, hash, company);
-            await gateway.disconnect();
-            blockchainTxId = `HLF_${Date.now()}`; // Custom ID as HLF doesn't return txid directly in some versions easily without more steps
+            
+            // Calling the Solidity registerProduct function
+            // (productID, name, manufacturer, batch, manufactureDate)
+            const tx = await contract.registerProduct(
+                serialNumber, 
+                productName, 
+                company, 
+                batchNumber, 
+                manufacturingDate.toString()
+            );
+            
+            // Wait for transaction to be mined
+            const receipt = await tx.wait();
+            blockchainTxId = receipt.hash; // Using the real transaction hash
         } else {
             console.log('Blockchain connection failed, proceeding with DB only for now.');
+            blockchainTxId = 'Not_on_Blockchain';
         }
 
         product = new Product({

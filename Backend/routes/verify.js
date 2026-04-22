@@ -24,25 +24,42 @@ router.post('/:serialNumber', async (req, res) => {
             return res.json({ status: 'Duplicate Serial Detected', count: logsCount, product });
         }
 
-        // Hyperledger Fabric Integration
-        let blockchainHash = product.hash; // default to DB hash if BC unavailable
+        // Blockchain Verification (Ethereum/Hardhat)
+        let isBlockchainVerified = false;
         const blockchain = await getContractInstance();
 
         if (blockchain) {
-            const { contract, gateway } = blockchain;
-            const result = await contract.evaluateTransaction('verifyProduct', serialNumber);
-            const productFromBC = JSON.parse(result.toString());
-            blockchainHash = productFromBC.productHash;
-            await gateway.disconnect();
+            try {
+                const { contract } = blockchain;
+                const productFromBC = await contract.verifyProduct(serialNumber);
+                
+                // If it doesn't throw, it exists. We can compare basic fields if we want extra security
+                // For now, if it returns data and isRegistered is true, it's verified on BC
+                if (productFromBC.isRegistered) {
+                    isBlockchainVerified = true;
+                }
+            } catch (bcErr) {
+                console.log('Product not found on blockchain or contract error:', bcErr.message);
+            }
         }
 
-        // compare hash
-        if (product.hash === blockchainHash) {
+        // Final verification logic
+        if (isBlockchainVerified) {
             await VerificationLog.create({ serialNumber, productId: product._id, ipAddress, status: 'Verified Original Product' });
-            return res.json({ status: 'Verified Original Product', product });
+            return res.json({ 
+                status: 'Verified Original Product', 
+                product,
+                blockchainVerified: true
+            });
         } else {
-            await VerificationLog.create({ serialNumber, productId: product._id, ipAddress, status: 'Fake / Not Found' });
-            return res.json({ status: 'Fake / Not Found', msg: 'Hash Mismatch or Product not in Ledger' });
+            // If it's in DB but not BC, it's a warning state
+            await VerificationLog.create({ serialNumber, productId: product._id, ipAddress, status: 'Database Match Only' });
+            return res.json({ 
+                status: 'Partial Verification', 
+                msg: 'Product found in local database but NOT verified on blockchain ledger.', 
+                product,
+                blockchainVerified: false
+            });
         }
     } catch (err) {
         console.error(err.message);

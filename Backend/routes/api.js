@@ -97,39 +97,64 @@ router.post('/transferProduct', async (req, res) => {
 router.get('/verifyProduct/:productID', async (req, res) => {
     try {
         const { productID } = req.params;
+        const ipAddress = req.ip || req.connection.remoteAddress;
 
         const blockchain = await getContractInstance();
         if (blockchain) {
-            const { contract } = blockchain;
-            let result = await contract.verifyProduct(productID);
+            try {
+                const { contract } = blockchain;
+                let result = await contract.verifyProduct(productID);
 
-            // Result is an array-like struct from ethers
-            const productData = {
-                productID: result.productID,
-                name: result.name,
-                manufacturer: result.manufacturer,
-                batch: result.batch,
-                manufactureDate: result.manufactureDate,
-                currentOwner: result.currentOwner,
-                status: result.status,
-                isRegistered: result.isRegistered
-            };
+                // Result is an array-like struct from ethers
+                const productData = {
+                    productID: result.productID,
+                    name: result.name,
+                    manufacturer: result.manufacturer,
+                    batch: result.batch,
+                    manufactureDate: result.manufactureDate,
+                    currentOwner: result.currentOwner,
+                    status: result.status,
+                    isRegistered: result.isRegistered
+                };
 
-            return res.json({ status: 'Authentic (Ethereum)', product: productData });
+                // Log Success
+                await VerificationLog.create({ 
+                    serialNumber: productID, 
+                    ipAddress, 
+                    status: 'Verified Original Product' 
+                });
+
+                return res.json({ status: 'Authentic (Ethereum)', product: productData });
+            } catch (bcErr) {
+                console.warn('Product not on blockchain:', bcErr.message);
+                // Fallback to DB check if not on blockchain
+            }
         }
 
-        // Fallback to local DB if blockchain is unavailable
+        // Check local DB
         let product = await Product.findOne({ serialNumber: productID });
         if (!product) {
+            // Log Failure
+            await VerificationLog.create({ 
+                serialNumber: productID, 
+                ipAddress, 
+                status: 'Fake / Not Found' 
+            });
             return res.status(404).json({ status: 'Fake / Not Found', msg: 'Product not found' });
         }
+
+        // Log Partial Success (DB match but not BC)
+        await VerificationLog.create({ 
+            serialNumber: productID, 
+            productId: product._id, 
+            ipAddress, 
+            status: 'Verified Original Product' // We can label it as verified if it's in DB
+        });
+
         res.json({ status: 'Authentic (DB)', product });
 
     } catch (err) {
         console.error(err.message || err);
-        if ((err.message && err.message.includes('not found')) || (err.reason && err.reason.includes('not found'))) {
-            return res.status(404).json({ status: 'Fake / Not Found', msg: 'Product not found in Ethereum Ledger' });
-        }
         res.status(500).send(err.reason || err.message || 'Server Error');
     }
 });

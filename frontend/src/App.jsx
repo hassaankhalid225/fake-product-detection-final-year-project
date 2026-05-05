@@ -12,13 +12,25 @@ import './index.css';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  if (!token) return <Navigate to="/login" />;
+  const isAuthenticated = token && token !== 'undefined';
+  console.log('ProtectedRoute: isAuthenticated?', isAuthenticated);
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ background: 'var(--background)' }}>
       <Sidebar />
-      <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+      <main style={{ 
+        flex: 1, 
+        padding: '40px', 
+        overflowY: 'auto', 
+        height: '100vh',
+        background: 'var(--background)' 
+      }}>
         {children}
-      </div>
+      </main>
     </div>
   );
 };
@@ -30,6 +42,7 @@ function App() {
         <Route path="/" element={<VerificationPage />} />
         <Route path="/verify/:serialNumber" element={<VerificationPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
 
         {/* Protected Routes */}
         <Route
@@ -72,6 +85,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );

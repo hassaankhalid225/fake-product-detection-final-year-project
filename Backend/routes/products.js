@@ -65,4 +65,20 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Recall product
+router.post('/recall', async (req, res) => {
+    try {
+        const { serialNumber } = req.body;
+        const product = await Product.findOne({ serialNumber });
+        if (!product) return res.status(404).json({ msg: 'Product not found' });
+
+        product.status = 'Recalled';
+        await product.save();
+        res.json({ msg: 'Product recalled successfully', product });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;

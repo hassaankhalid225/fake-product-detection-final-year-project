@@ -5,7 +5,17 @@ const VerificationLogSchema = new mongoose.Schema({
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     ipAddress: { type: String },
     location: { type: String },
-    status: { type: String, enum: ['Verified Original Product', 'Fake / Not Found', 'Duplicate Serial Detected'], required: true },
+    status: { 
+        type: String, 
+        enum: [
+            'Verified Original Product', 
+            'Fake / Not Found', 
+            'Duplicate Serial Detected', 
+            'Partial Verification', 
+            'Suspicious Activity Detected'
+        ], 
+        required: true 
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('VerificationLog', VerificationLogSchema);

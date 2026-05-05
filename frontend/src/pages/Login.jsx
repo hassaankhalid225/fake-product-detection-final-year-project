@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiLock, FiMail } from 'react-icons/fi';
+import { FiLock, FiMail, FiShield } from 'react-icons/fi';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -29,56 +29,60 @@ const Login = () => {
         }
     };
 
-
     return (
-        <div className="flex-center" style={{ minHeight: '100vh', width: '100%' }}>
-            <div className="glass-panel animate-fade-in" style={{ padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center' }}>
-                <h1 className="heading" style={{ fontSize: '2rem', marginBottom: '8px' }}>VeriChain</h1>
-                <p className="subheading" style={{ marginBottom: '30px' }}>Admin login for Product Verification System</p>
+        <div className="flex-center" style={{ minHeight: '100vh', width: '100%', background: 'var(--background)' }}>
+            <div className="glass-panel animate-fade-in" style={{ padding: '60px 40px', width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+                <div className="flex-center" style={{ marginBottom: '24px' }}>
+                    <FiShield size={64} color="var(--primary)" className="pulse" />
+                </div>
+                <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '8px' }}>VERICHAIN</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '40px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    Authorized Personnel Access Only
+                </p>
 
                 {error && (
-                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)', color: 'var(--error)', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
+                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)', color: 'var(--error)', padding: '16px', borderRadius: '8px', marginBottom: '24px', fontSize: '0.9rem' }}>
                         {error}
                     </div>
                 )}
 
                 <form onSubmit={handleLogin}>
-                    <div style={{ marginBottom: '16px', position: 'relative' }}>
-                        <FiMail style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--text-secondary)' }} />
+                    <div style={{ marginBottom: '20px', position: 'relative' }}>
+                        <FiMail style={{ position: 'absolute', top: '18px', left: '20px', color: 'var(--text-secondary)' }} />
                         <input
                             type="email"
-                            placeholder="Email address"
+                            placeholder="EMAIL ADDRESS"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            style={{ paddingLeft: '44px', margin: 0 }}
+                            style={{ paddingLeft: '56px', margin: 0 }}
                         />
                     </div>
 
-                    <div style={{ marginBottom: '24px', position: 'relative' }}>
-                        <FiLock style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--text-secondary)' }} />
+                    <div style={{ marginBottom: '32px', position: 'relative' }}>
+                        <FiLock style={{ position: 'absolute', top: '18px', left: '20px', color: 'var(--text-secondary)' }} />
                         <input
                             type="password"
-                            placeholder="Password"
+                            placeholder="PASSWORD"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ paddingLeft: '44px', margin: 0 }}
+                            style={{ paddingLeft: '56px', margin: 0 }}
                         />
                     </div>
 
                     <button
                         type="submit"
-                        className="btn"
-                        style={{ width: '100%' }}
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '18px' }}
                         disabled={loading}
                     >
-                        {loading ? 'Authenticating...' : 'Sign In To Dashboard'}
+                        {loading ? 'AUTHENTICATING...' : 'ACCESS DASHBOARD'}
                     </button>
                 </form>
 
-                <p style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Secured by Blockchain Technology
+                <p style={{ marginTop: '40px', fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>
+                    SECURED BY IMMUTABLE BLOCKCHAIN TECHNOLOGY
                 </p>
             </div>
         </div>
@@ -86,3 +90,4 @@ const Login = () => {
 };
 
 export default Login;
+

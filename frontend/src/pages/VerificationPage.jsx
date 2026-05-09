@@ -7,7 +7,7 @@ import {
   FiCheckCircle, FiClock, FiArrowLeft, FiMapPin, 
   FiUser, FiActivity, FiFlag, FiInfo 
 } from 'react-icons/fi';
-
+erification Hub, users can click "VIEW ON EXPLORER
 const VerificationPage = () => {
     const { serialNumber } = useParams();
     const navigate = useNavigate();
@@ -276,9 +276,19 @@ const VerificationPage = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                         <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid var(--surface-border)' }}>
                                             <p style={{ fontSize: '0.65rem', opacity: 0.5, marginBottom: '8px' }}>BLOCKCHAIN TX ID</p>
-                                            <p style={{ fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: 'var(--accent)', wordBreak: 'break-all' }}>
+                                            <p style={{ fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: 'var(--accent)', wordBreak: 'break-all', marginBottom: '12px' }}>
                                                 {result.product.blockchainTxId}
                                             </p>
+                                            {result.product.blockchainTxId !== 'not-recorded' && (
+                                                <a 
+                                                    href={`https://sepolia.etherscan.io/tx/${result.product.blockchainTxId}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                >
+                                                    <FiInfo size={12} /> VIEW ON EXPLORER
+                                                </a>
+                                            )}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></div>

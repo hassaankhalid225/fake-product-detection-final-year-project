@@ -39,12 +39,21 @@ router.post('/registerProduct', async (req, res) => {
 
         const blockchain = await getContractInstance();
         let currentOwner = manufacturer;
+        let blockchainTxId = 'not-recorded';
+        let productHash = 'not-calculated';
+
+        // Real Logic: Generate a hash for the product data to ensure integrity
+        const crypto = require('crypto');
+        productHash = crypto.createHash('sha256').update(productID + name + batch + manufactureDate).digest('hex');
+
         if (blockchain) {
             const { contract } = blockchain;
             const tx = await contract.registerProduct(productID, name, manufacturer, batch, manufactureDate);
-            await tx.wait(); // Wait for tx to be mined
+            const receipt = await tx.wait(); // Wait for tx to be mined
+            blockchainTxId = receipt.hash; // Real transaction hash
+            console.log(`[Blockchain] Product registered. Tx: ${blockchainTxId}`);
         } else {
-            console.warn('Blockchain connection failed or mocked.');
+            console.warn('Blockchain connection failed. Falling back to DB-only mode.');
         }
 
         product = new Product({
@@ -54,12 +63,16 @@ router.post('/registerProduct', async (req, res) => {
             manufacturingDate: manufactureDate,
             quantity: 1,
             description: description || 'No description',
-            hash: 'mock-hash',
-            blockchainTxId: 'mock-tx-id'
+            hash: productHash,
+            blockchainTxId: blockchainTxId
         });
 
         await product.save();
-        res.json({ message: 'Product successfully registered on Ethereum!', product });
+        res.json({ 
+            message: blockchain ? 'Product successfully registered on Ethereum!' : 'Product registered in DB (Blockchain Offline)', 
+            product,
+            txHash: blockchainTxId
+        });
     } catch (err) {
         console.error(err.message || err);
         res.status(500).send(err.reason || err.message || 'Server Error');
@@ -80,13 +93,15 @@ router.post('/transferProduct', async (req, res) => {
         }
 
         const blockchain = await getContractInstance();
+        let txHash = null;
         if (blockchain) {
             const { contract } = blockchain;
             const tx = await contract.transferProduct(productID, toAddress);
-            await tx.wait();
+            const receipt = await tx.wait();
+            txHash = receipt.hash;
         }
 
-        res.json({ message: 'Product transfer recorded on Ethereum successfully.' });
+        res.json({ message: 'Product transfer recorded on Ethereum successfully.', txHash });
     } catch (err) {
         console.error(err.message || err);
         res.status(500).send(err.reason || err.message || 'Server Error');
@@ -192,13 +207,15 @@ router.post('/markProductSold', async (req, res) => {
         const { productID } = req.body;
 
         const blockchain = await getContractInstance();
+        let txHash = null;
         if (blockchain) {
             const { contract } = blockchain;
             const tx = await contract.markProductSold(productID);
-            await tx.wait();
+            const receipt = await tx.wait();
+            txHash = receipt.hash;
         }
 
-        res.json({ message: 'Product marked as sold on Ethereum.' });
+        res.json({ message: 'Product marked as sold on Ethereum.', txHash });
     } catch (err) {
         console.error(err.message || err);
         res.status(500).send(err.reason || err.message || 'Server Error');

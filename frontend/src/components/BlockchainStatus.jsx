@@ -5,10 +5,12 @@ import { FiLink, FiLink2, FiAlertCircle } from 'react-icons/fi';
 const BlockchainStatus = () => {
     const [status, setStatus] = useState({ connected: false, loading: true });
 
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
     useEffect(() => {
         const checkStatus = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/blockchain-status');
+                const res = await axios.get(`${API_BASE_URL}/blockchain-status`);
                 setStatus({ ...res.data, loading: false });
             } catch (err) {
                 setStatus({ connected: false, loading: false, error: 'Backend unreachable' });

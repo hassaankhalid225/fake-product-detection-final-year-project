@@ -3,11 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { 
-  FiSearch, FiCamera, FiShield, FiAlertTriangle, 
+  FiSearch, FiCamera, FiShield, FiAlertTriangle, FiAlertCircle,
   FiCheckCircle, FiClock, FiArrowLeft, FiMapPin, 
   FiUser, FiActivity, FiFlag, FiInfo 
 } from 'react-icons/fi';
-erification Hub, users can click "VIEW ON EXPLORER
 const VerificationPage = () => {
     const { serialNumber } = useParams();
     const navigate = useNavigate();
